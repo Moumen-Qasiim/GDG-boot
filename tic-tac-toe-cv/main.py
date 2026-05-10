@@ -80,11 +80,20 @@ class HandTrackerThread(threading.Thread):
                     self.cursor = ((thumb.x + index.x)/2, (thumb.y + index.y)/2)
                     # Pinch detection (distance between thumb and index)
                     dist = ((thumb.x - index.x)**2 + (thumb.y - index.y)**2)**0.5
-                    self.pinched = dist < 0.05
-                    break # Track only first hand
+                    
+                    # DEBOUNCE: Must be pinched for at least 3 consecutive detections
+                    is_currently_pinched = dist < 0.035 # More strict threshold
+                    if is_currently_pinched:
+                        self._pinch_counter += 1
+                    else:
+                        self._pinch_counter = 0
+                    
+                    self.pinched = self._pinch_counter >= 3
+                    break 
             else:
                 self.cursor = None
                 self.pinched = False
+                self._pinch_counter = 0
 
         options = vision.HandLandmarkerOptions(
             base_options=base, running_mode=vision.RunningMode.LIVE_STREAM,
@@ -92,6 +101,7 @@ class HandTrackerThread(threading.Thread):
         )
         self.detector = vision.HandLandmarker.create_from_options(options)
         self.cap = cv2.VideoCapture(0)
+        self._pinch_counter = 0
 
     def _ensure_model_exists(self):
         if not MODEL_PATH.exists(): urllib.request.urlretrieve(MODEL_URL, str(MODEL_PATH))
@@ -126,7 +136,8 @@ class Particle:
 class TicTacToe:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED)
+        # ENABLE AUTO-SCALING FULLSCREEN BY DEFAULT
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
         pygame.display.set_caption("GDG ZU TIC-TAC-TOE")
         self.clock = pygame.time.Clock()
         self.tracker = HandTrackerThread()
@@ -135,6 +146,7 @@ class TicTacToe:
         self.reset_game()
         self.particles = []
         self.shake = 0
+        self.is_fullscreen = True
 
     def reset_game(self):
         self.board = [None] * 9
@@ -157,6 +169,12 @@ class TicTacToe:
                 if event.type == pygame.QUIT: sys.exit()
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE: sys.exit()
+                    if event.key == pygame.K_f:
+                        self.is_fullscreen = not self.is_fullscreen
+                        if self.is_fullscreen:
+                            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN | pygame.SCALED)
+                        else:
+                            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SCALED)
                     if event.key == pygame.K_SPACE and self.state != STATE_PLAYING:
                         self.reset_game()
                         self.state = STATE_PLAYING
@@ -210,15 +228,20 @@ class TicTacToe:
                         my = grid_rect.top + (i // 3) * CELL_SIZE + CELL_SIZE // 2
                         color = COLOR_X if mark == 'X' else COLOR_O
                         draw_pixel_text(self.screen, mark, mx, my - 20, scale=12, color=color, center=True)
+                
+                # Turn Indicator
+                t_color = COLOR_X if self.turn == 'X' else COLOR_O
+                draw_pixel_text(self.screen, f"TURN: {self.turn}", SCREEN_WIDTH//2, 50, scale=8, color=t_color, center=True)
 
             elif self.state == STATE_MENU:
                 draw_pixel_text(self.screen, "GOOGLE DEVELOPMENT GROUP", SCREEN_WIDTH//2, 200, scale=6, center=True)
                 draw_pixel_text(self.screen, "TIC-TAC-TOE", SCREEN_WIDTH//2, 280, scale=14, center=True)
-                draw_pixel_text(self.screen, "PINCH TO PLACE | SPACE TO START", SCREEN_WIDTH//2, 450, scale=4, color=COLOR_GRID, center=True)
+                draw_pixel_text(self.screen, "PINCH TO PLACE | SPACE TO START | F: FULLSCREEN | ESC: EXIT", SCREEN_WIDTH//2, 450, scale=3, color=COLOR_GRID, center=True)
 
             elif self.state == STATE_VICTORY:
-                txt = f"{self.winner} WINS!" if self.winner != "DRAW" else "DRAW!"
-                draw_pixel_text(self.screen, txt, SCREEN_WIDTH//2, 300, scale=15, color=COLOR_WHITE, center=True)
+                txt = f"PLAYER {self.winner} WINS!" if self.winner != "DRAW" else "DRAW!"
+                v_color = COLOR_X if self.winner == 'X' else COLOR_O if self.winner == 'O' else COLOR_WHITE
+                draw_pixel_text(self.screen, txt, SCREEN_WIDTH//2, 300, scale=15, color=v_color, center=True)
                 draw_pixel_text(self.screen, "SPACE TO PLAY AGAIN", SCREEN_WIDTH//2, 450, scale=4, center=True)
                 for _ in range(5): self.particles.append(Particle(random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT), random.choice([COLOR_X, COLOR_O, COLOR_GRID])))
 
