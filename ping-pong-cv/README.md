@@ -18,7 +18,7 @@ A high-performance, 2-player, camera-based Ping Pong game built for the Google D
 
 1. **Clone the repository**:
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/Moumen-Qasiim/GDG-boot.git
    cd ping-pong-cv
    ```
 
