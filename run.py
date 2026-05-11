@@ -10,9 +10,9 @@ PROJECT_ROOT = Path(__file__).parent.resolve()
 VENV_DIR = PROJECT_ROOT / ".venv"
 GAMES = [
     {
-        "name": "Rock Paper Scissors",
-        "path": "Rock-paper-scissors/rock/rock/rock.py",
-        "cwd": "Rock-paper-scissors/rock/rock"
+        "name": "Rock Paper Scissors CV",
+        "path": "rock-paper-scissors-cv/main.py",
+        "cwd": "rock-paper-scissors-cv"
     },
     {
         "name": "Snake",
@@ -28,6 +28,11 @@ GAMES = [
         "name": "Tic Tac Toe CV",
         "path": "tic-tac-toe-cv/main.py",
         "cwd": "tic-tac-toe-cv"
+    },
+    {
+        "name": "Snake CV",
+        "path": "snake-cv/main.py",
+        "cwd": "snake-cv"
     }
 ]
 
