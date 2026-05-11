@@ -94,7 +94,19 @@ class HandTrackerThread(threading.Thread):
         )
         self.detector = vision.HandLandmarker.create_from_options(options)
         
-        self.cap = cv2.VideoCapture(0)
+        # Try to find a working camera
+        self.cap = None
+        for i in [0, 1, 2]:
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                print(f"Opened camera index {i}")
+                self.cap = cap
+                break
+        
+        if not self.cap:
+            print("Error: Could not open any camera.")
+            sys.exit(1)
+
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
